@@ -1,16 +1,25 @@
 
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const supabaseUrl = 'https://nxhjvziraymcmrvudlnm.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54aGp2emlyYXltY21ydnVkbG5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3NDIzMzksImV4cCI6MjA2MDMxODMzOX0.IE97E8fQH1KrKBMiNpfabqiTAhGJ2UlszSbE71OSsNo';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
+});
 
 export type Mood = 'happy' | 'calm' | 'neutral' | 'sad' | 'stressed';
 
 export interface MoodEntry {
   id: string;
+  user_id: string;
   date: string;
   mood: Mood;
   emoji: string;
@@ -30,7 +39,11 @@ export const getMoodEmoji = (mood: Mood): string => {
 };
 
 export const saveMoodEntry = async (mood: Mood, note?: string): Promise<MoodEntry | null> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
   const entry = {
+    user_id: user.id,
     date: new Date().toISOString().split('T')[0],
     mood,
     emoji: getMoodEmoji(mood),
@@ -53,11 +66,15 @@ export const saveMoodEntry = async (mood: Mood, note?: string): Promise<MoodEntr
 };
 
 export const getTodaysMoodEntry = async (): Promise<MoodEntry | null> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
   const today = new Date().toISOString().split('T')[0];
   
   const { data, error } = await supabase
     .from('mood_entries')
     .select()
+    .eq('user_id', user.id)
     .eq('date', today)
     .single();
 
@@ -72,6 +89,9 @@ export const getTodaysMoodEntry = async (): Promise<MoodEntry | null> => {
 };
 
 export const getLastWeekMoods = async (): Promise<MoodEntry[]> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(endDate.getDate() - 6);
@@ -79,6 +99,7 @@ export const getLastWeekMoods = async (): Promise<MoodEntry[]> => {
   const { data, error } = await supabase
     .from('mood_entries')
     .select()
+    .eq('user_id', user.id)
     .gte('date', startDate.toISOString().split('T')[0])
     .lte('date', endDate.toISOString().split('T')[0])
     .order('date', { ascending: true });

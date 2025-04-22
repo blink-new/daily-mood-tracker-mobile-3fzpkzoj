@@ -42,27 +42,40 @@ export const saveMoodEntry = async (mood: Mood, note?: string): Promise<MoodEntr
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  const today = new Date().toISOString().split('T')[0];
   const entry = {
     user_id: user.id,
-    date: new Date().toISOString().split('T')[0],
+    date: today,
     mood,
     emoji: getMoodEmoji(mood),
     note,
     created_at: new Date().toISOString()
   };
 
-  const { data, error } = await supabase
+  // First try to update existing entry
+  const { data: updateData, error: updateError } = await supabase
+    .from('mood_entries')
+    .update(entry)
+    .eq('user_id', user.id)
+    .eq('date', today)
+    .select()
+    .single();
+
+  if (updateData) return updateData;
+
+  // If no existing entry, create new one
+  const { data: insertData, error: insertError } = await supabase
     .from('mood_entries')
     .insert([entry])
     .select()
     .single();
 
-  if (error) {
-    console.error('Error saving mood:', error);
+  if (insertError) {
+    console.error('Error saving mood:', insertError);
     return null;
   }
 
-  return data;
+  return insertData;
 };
 
 export const getTodaysMoodEntry = async (): Promise<MoodEntry | null> => {

@@ -17,6 +17,7 @@ const MOODS: Array<{ emoji: string; label: string; mood: Mood }> = [
 export default function HomeScreen() {
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [todayEntry, setTodayEntry] = useState<MoodEntry | null>(null);
 
   useEffect(() => {
@@ -33,9 +34,9 @@ export default function HomeScreen() {
   };
 
   const handleMoodSelect = async (mood: Mood) => {
-    if (isLoading || todayEntry) return;
+    if (isSaving) return;
     
-    setIsLoading(true);
+    setIsSaving(true);
     setSelectedMood(mood);
     
     const entry = await saveMoodEntry(mood);
@@ -43,7 +44,7 @@ export default function HomeScreen() {
       setTodayEntry(entry);
     }
     
-    setIsLoading(false);
+    setIsSaving(false);
   };
 
   return (
@@ -59,7 +60,7 @@ export default function HomeScreen() {
           </Text>
           <Text style={styles.question}>
             {todayEntry 
-              ? "Today's Mood"
+              ? "How are you feeling now?"
               : "How are you feeling today?"}
           </Text>
         </View>
@@ -78,6 +79,7 @@ export default function HomeScreen() {
                 mood={mood.mood}
                 selected={selectedMood === mood.mood}
                 onPress={handleMoodSelect}
+                disabled={isSaving}
               />
             ))}
           </View>
@@ -85,7 +87,7 @@ export default function HomeScreen() {
 
         <ReflectionCard 
           mood={selectedMood || undefined}
-          isLoading={isLoading}
+          isLoading={isLoading || isSaving}
         />
       </ScrollView>
     </SafeAreaView>

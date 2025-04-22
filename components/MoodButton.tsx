@@ -8,10 +8,18 @@ interface MoodButtonProps {
   label: string;
   mood: Mood;
   selected: boolean;
+  disabled?: boolean;
   onPress: (mood: Mood) => void;
 }
 
-export function MoodButton({ emoji, label, mood, selected, onPress }: MoodButtonProps) {
+export function MoodButton({ 
+  emoji, 
+  label, 
+  mood, 
+  selected, 
+  disabled,
+  onPress 
+}: MoodButtonProps) {
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
@@ -34,18 +42,23 @@ export function MoodButton({ emoji, label, mood, selected, onPress }: MoodButton
   return (
     <TouchableOpacity
       activeOpacity={0.8}
-      onPress={() => onPress(mood)}
+      onPress={() => !disabled && onPress(mood)}
       style={styles.container}
+      disabled={disabled}
     >
       <Animated.View
         style={[
           styles.content,
           selected && styles.selected,
+          disabled && styles.disabled,
           { transform: [{ scale: scaleAnim }] }
         ]}
       >
         <Text style={styles.emoji}>{emoji}</Text>
-        <Text style={[styles.label, selected && styles.selectedLabel]}>
+        <Text style={[
+          styles.label,
+          selected && styles.selectedLabel
+        ]}>
           {label}
         </Text>
       </Animated.View>
@@ -74,6 +87,9 @@ const styles = StyleSheet.create({
   },
   selected: {
     backgroundColor: '#7C3AED',
+  },
+  disabled: {
+    opacity: 0.7,
   },
   emoji: {
     fontSize: 32,
